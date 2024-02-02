@@ -1,0 +1,5 @@
+
+
+Data is layed out 1D dimensionally in 2D texture, representing 3D coordinates.
+ - Think texture being just a page, where you list numbers. 
+   At end of each you have to move next row to list more numbers.
