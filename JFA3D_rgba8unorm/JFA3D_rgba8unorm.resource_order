@@ -1,0 +1,11 @@
+{
+  "FolderOrderSettings": [
+    {"name":"TiteJFA3D Example","order":1,"path":"folders/TiteJFA3D Example.yy",},
+    {"name":"TiteJFA3D","order":2,"path":"folders/TiteJFA3D.yy",},
+  ],
+  "ResourceOrderSettings": [
+    {"name":"objTiteJFA3D_Example","order":1,"path":"objects/objTiteJFA3D_Example/objTiteJFA3D_Example.yy",},
+    {"name":"shdTiteJFA3D","order":1,"path":"shaders/shdTiteJFA3D/shdTiteJFA3D.yy",},
+    {"name":"noteTiteJFA3D","order":2,"path":"notes/noteTiteJFA3D/noteTiteJFA3D.yy",},
+  ],
+}
