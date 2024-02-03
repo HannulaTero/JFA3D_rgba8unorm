@@ -1,5 +1,17 @@
 
 
-Data is layed out 1D dimensionally in 2D texture, representing 3D coordinates.
- - Think texture being just a page, where you list numbers. 
-   At end of each you have to move next row to list more numbers.
+Data is mapped as 3D, but layed out as slices in 2D texture.
+ - Structure is a lookup table.
+ - There are 16 slices per row, then they will wrap to next row.
+ - To keep things simple, shape dimension must be powers of 2.
+ - Shape XY corresponds to slice XY size.
+ - Shape Z is jumps between different slices.
+ 
+In shader, positions may be represented as 2D, 3D or LUT.
+ - 2D represents global position in surface texture.
+ - 3D represents position in the shape.
+ - LUT is 4D value, XY tells position in slice, ZW tell which slice.
+
+Coordinate mapping data structure (both regular and reverse mapping).
+ - RGB components	: stores XYZ coordinates of closest seed.
+ - A component		: stores whether coordinate points to seed value, which is used during flooding passes.

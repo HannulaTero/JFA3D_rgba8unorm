@@ -1,11 +1,11 @@
 
 /// @func	TiteJFA3D(width, height, depth);
 /// @desc	Jump Flood Algorithm, generates coordinate mapping of closest seeds and distance field. 
-/// @param	{Real}	_w
-/// @param	{Real}	_h
-/// @param	{Real}	_d
+/// @param	{Real}	_w	Width as power of 2
+/// @param	{Real}	_h	Height as power of 2
+/// @param	{Real}	_d	Depth as power of 2
 /// @Return	{Struct.TiteJFA}
-function TiteJFA3D(_w=256, _h=256, _d=256) constructor 
+function TiteJFA3D(_w=128, _h=128, _d=128) constructor 
 {
 //==========================================================
 //
@@ -24,13 +24,13 @@ function TiteJFA3D(_w=256, _h=256, _d=256) constructor
 		reverse:	-1,
 		fill:		-1,
 		field:		-1,
-		lookup:		-1,
+		shrink:		-1,
 		vertex:		-1
 	};
 	self.enable = {
 		fill:	true,
 		field:	true,
-		lookup:	true,
+		shrink:	true,
 		vertex:	false
 	};
 	
@@ -46,15 +46,20 @@ function TiteJFA3D(_w=256, _h=256, _d=256) constructor
 	
 	
 	// User handle: Reshape surfaces.
-	static Reshape = function(_w=256, _h=256, _d=256) 
+	static Reshape = function(_w=128, _h=128, _d=128) 
 	{
-		// Reshape dimensions.
-		self.shape[0] = clamp(ceil(_w), 1, 256);
-		self.shape[1] = clamp(ceil(_h), 1, 256);
-		self.shape[2] = clamp(ceil(_d), 1, 256);
+		// Set 3D dimensions.
+		self.shape[0] = clamp(self.__ToPower2(_w), 1, 256);
+		self.shape[1] = clamp(self.__ToPower2(_h), 1, 256);
+		self.shape[2] = clamp(self.__ToPower2(_d), 1, 256);
+		
+		// Get stride for linearizing.
+		self.stride[0] = 1;
+		self.stride[1] = self.stride[0];
+		self.stride[2] = self.stride[1] * self.shape[1];
 		
 		// Get surface size.
-		var _count	= self.shape[0] * self.shape[1] * self.shape[2];
+		var _count	= self.stride[2] * self.shape[2];
 		self.width	= ceil(sqrt(_count));
 		self.height = ceil(sqrt(_count));
 		
@@ -100,6 +105,7 @@ function TiteJFA3D(_w=256, _h=256, _d=256) constructor
 		static __uniSize		= shader_get_uniform(__shader, "uniSize");
 		static __uniTexel		= shader_get_uniform(__shader, "uniTexel");
 		static __uniShape		= shader_get_uniform(__shader, "uniShape");
+		static __uniStride		= shader_get_uniform(__shader, "uniStride");
 		static __uniThreshold	= shader_get_uniform(__shader, "uniThreshold");
 		static __uniJumpMax		= shader_get_uniform(__shader, "uniJumpMax");
 		static __texB			= shader_get_sampler_index(__shader, "texB");
@@ -121,6 +127,7 @@ function TiteJFA3D(_w=256, _h=256, _d=256) constructor
 		shader_set_uniform_f(__uniSize, _w, _h);
 		shader_set_uniform_f(__uniTexel, 1.0/_w, 1.0/_h);
 		shader_set_uniform_f_array(__uniShape, self.shape);
+		shader_set_uniform_f_array(__uniStride, self.stride);
 		
 		// Get the regular seed coordinates.
 		shader_set_uniform_i(__uniAction, 0);
@@ -288,6 +295,12 @@ function TiteJFA3D(_w=256, _h=256, _d=256) constructor
 		return self;
 	}
 
+	// Makes value to closest next power of 2 value
+	static __ToPower2 = function(_value)
+	{
+		return power(2.0, ceil(log2(_value)));
+	}
+	
 
 #endregion
 // 
