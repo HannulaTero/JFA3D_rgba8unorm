@@ -1,9 +1,9 @@
 
 /// @func	TiteJFA3D(width, height, depth);
 /// @desc	Jump Flood Algorithm, generates coordinate mapping of closest seeds and distance field. 
-/// @param	{Real}	_w	Width as power of 2
-/// @param	{Real}	_h	Height as power of 2
-/// @param	{Real}	_d	Depth as power of 2
+/// @param	{Real}	_w	Width	as power of 2.
+/// @param	{Real}	_h	Height	as power of 2.
+/// @param	{Real}	_d	Depth	as power of 2.
 /// @Return	{Struct.TiteJFA}
 function TiteJFA3D(_w=128, _h=128, _d=128) constructor 
 {
@@ -13,25 +13,21 @@ function TiteJFA3D(_w=128, _h=128, _d=128) constructor
 
 
 	// Variables initialization.
-	self.shape = [1, 1, 1];
 	self.width = 1;
 	self.height = 1;
+	self.shape = [1, 1, 1];
 	self.threshold = 0.5;
 	self.jumpMax = infinity;
 	self.surfaces = {
-		temp:		-1,
-		mapping:	-1,
-		reverse:	-1,
-		fill:		-1,
-		field:		-1,
-		shrink:		-1,
-		vertex:		-1
+		temp:	 -1,
+		mapping: -1,
+		reverse: -1,
+		fill:	 -1,
+		field:	 -1
 	};
 	self.enable = {
 		fill:	true,
-		field:	true,
-		shrink:	true,
-		vertex:	false
+		field:	true
 	};
 	
 	// Set to wanted shape.
@@ -48,31 +44,24 @@ function TiteJFA3D(_w=128, _h=128, _d=128) constructor
 	// User handle: Reshape surfaces.
 	static Reshape = function(_w=128, _h=128, _d=128) 
 	{
-		// Set 3D dimensions.
-		self.shape[0] = clamp(self.__ToPower2(_w), 1, 256);
-		self.shape[1] = clamp(self.__ToPower2(_h), 1, 256);
-		self.shape[2] = clamp(self.__ToPower2(_d), 1, 256);
-		
-		// Get stride for linearizing.
-		self.stride[0] = 1;
-		self.stride[1] = self.stride[0];
-		self.stride[2] = self.stride[1] * self.shape[1];
+		// Set 3D dimensions, force powers of 2.
+		self.shape[0] = clamp(power(2.0, ceil(log2(_w))), 1, 256);
+		self.shape[1] = clamp(power(2.0, ceil(log2(_h))), 1, 256);
+		self.shape[2] = clamp(power(2.0, ceil(log2(_d))), 1, 256);
 		
 		// Get surface size.
-		var _count	= self.stride[2] * self.shape[2];
-		self.width	= ceil(sqrt(_count));
-		self.height = ceil(sqrt(_count));
+		self.width	= self.shape[0] * (self.shape[2] mod 16.0);
+		self.height = self.shape[1] * (self.shape[2] div 16.0);
 		
 		// Give warning, if given dimensions were not valid.
-		if (self.width != _w) || (self.height != _h) || (self.depth != _d)
+		if (self.shape[0] != _w) || (self.shape[1] != _h) || (self.shape[2] != _d)
 		{
-			var _warning = $"[TiteJFA3D] Warning: "
+			var _warning = $"[TiteJFA3D_Surface] Warning: "
 				_warning += $"Dimensions [{_w}, {_h}, {_d}] are not valid, ";
 				_warning += $"dimensions {self.shape} used instead.";
 			show_debug_message(_warning);
 		}
-		
-		return self;	
+		return self;
 	};
 	
 	
@@ -86,26 +75,22 @@ function TiteJFA3D(_w=128, _h=128, _d=128) constructor
 	
 	
 	// User handle: Which actions are executed when updating.
-	static Enable = function(_fill=true, _field=true, _lookup=true, _vertex=false) 
+	static Enable = function(_fill=true, _field=true) 
 	{
 		self.enable.fill = _fill;
 		self.enable.field = _field;
-		self.enable.lookup = _lookup;
-		self.enable.vertex = _vertex;
 		return self;
 	};
 	
 	
-	// User handle: Do jump flooding and update all surfaces by given seed.
+	// User handle: Do jump flooding and update surfaces by given seed.
 	static Update = function(_seed) 
 	{
 		// Get the uniform handles.
 		static __shader			= shdTiteJFA3D;
 		static __uniAction		= shader_get_uniform(__shader, "uniAction");
-		static __uniSize		= shader_get_uniform(__shader, "uniSize");
 		static __uniTexel		= shader_get_uniform(__shader, "uniTexel");
 		static __uniShape		= shader_get_uniform(__shader, "uniShape");
-		static __uniStride		= shader_get_uniform(__shader, "uniStride");
 		static __uniThreshold	= shader_get_uniform(__shader, "uniThreshold");
 		static __uniJumpMax		= shader_get_uniform(__shader, "uniJumpMax");
 		static __texB			= shader_get_sampler_index(__shader, "texB");
@@ -124,10 +109,8 @@ function TiteJFA3D(_w=128, _h=128, _d=128) constructor
 		self.surfaces.temp = self.Verify(self.surfaces.temp);
 		self.surfaces.mapping = self.Verify(self.surfaces.mapping);
 		self.surfaces.reverse = self.Verify(self.surfaces.reverse);
-		shader_set_uniform_f(__uniSize, _w, _h);
 		shader_set_uniform_f(__uniTexel, 1.0/_w, 1.0/_h);
 		shader_set_uniform_f_array(__uniShape, self.shape);
-		shader_set_uniform_f_array(__uniStride, self.stride);
 		
 		// Get the regular seed coordinates.
 		shader_set_uniform_i(__uniAction, 0);
@@ -167,28 +150,8 @@ function TiteJFA3D(_w=128, _h=128, _d=128) constructor
 		{
 			self.surfaces.field = self.Verify(self.surfaces.field);
 			shader_set_uniform_i(__uniAction, 4);
-			texture_set_stage(__texB, surface_get_texture(self.surface.reverse));
+			texture_set_stage(__texB, self.surface.reverse.Texture());
 			surface_set_target(self.surfaces.field);
-			draw_surface_stretched(self.surfaces.mapping, 0, 0, _w, _h);
-			surface_reset_target();
-		}
-		
-		// Optional: Generate lookup table.
-		if (self.enable.lookup)
-		{
-			self.surfaces.lookup = self.Verify(self.surfaces.lookup);
-			shader_set_uniform_i(__uniAction, 5);
-			surface_set_target(self.surfaces.lookup);
-			draw_surface_stretched(self.surfaces.mapping, 0, 0, _w, _h);
-			surface_reset_target();
-		}
-		
-		// Optional: Generate vertices.
-		if (self.enable.vertex)
-		{
-			self.surfaces.vertex = self.Verify(self.surfaces.vertex);
-			shader_set_uniform_i(__uniAction, 6);
-			surface_set_target(self.surfaces.vertex);
 			draw_surface_stretched(self.surfaces.mapping, 0, 0, _w, _h);
 			surface_reset_target();
 		}
@@ -202,8 +165,8 @@ function TiteJFA3D(_w=128, _h=128, _d=128) constructor
 		return self;
 	};
 	
-	
-	// User handle: Verify all surfaces exists and are in correct shape, recreate if not.
+
+	// User handle: Verify surface exists and are in correct shape, recreate if not.
 	static Verify = function(_surface) 
 	{
 		// Check whether in correct shape
@@ -227,21 +190,18 @@ function TiteJFA3D(_w=128, _h=128, _d=128) constructor
 	};
 	
 	
-	// User handle: Free all surfaces.
+	// User handle: Free all dasurfacesta.
 	static Free = function() 
 	{
-		// Iterate through all surfaces.
-		struct_foreach(self.surfaces, function(key, element) 
+		struct_foreach(self.surfaces, function(_key, _element) 
 		{
-			// Free the surface.
-			if (surface_exists(element))
+			if (surface_exists(_element))
 			{
-				surface_free(element);
+				surface_free(_element);
 			}
 		});
 		return self;
 	};
-
 
 
 #endregion
@@ -250,7 +210,7 @@ function TiteJFA3D(_w=128, _h=128, _d=128) constructor
 //
 #region HELPER METHODS
 
-
+	
 	// Separates each axis into own passes.
 	// This way only 9 samples is required instead of 27.
 	// This of course requires more passes, but in higher dimensions it is better.
@@ -287,18 +247,14 @@ function TiteJFA3D(_w=128, _h=128, _d=128) constructor
 	// Does one third of single jump pass, along one dimensional axis.
 	static __JumpPass = function(_dst, _src, _jumpW, _jumpH, _jumpD) 
 	{
-		static __uniJumpDist = shader_get_uniform(shdTiteJFA3D, "uniJumpDist");
-		shader_set_uniform_f(__uniJumpDist, _jumpW, _jumpH, _jumpD);
+		static __uniJumpA = shader_get_uniform(shdTiteJFA3D, "uniJumpA");
+		static __uniJumpB = shader_get_uniform(shdTiteJFA3D, "uniJumpB");
+		shader_set_uniform_f(__uniJumpA, +_jumpW, +_jumpH, +_jumpD);
+		shader_set_uniform_f(__uniJumpB, -_jumpW, -_jumpH, -_jumpD);
 		surface_set_target(_dst);
 		draw_surface_stretched(_src, 0, 0, self.width, self.height);
 		surface_reset_target();
 		return self;
-	}
-
-	// Makes value to closest next power of 2 value
-	static __ToPower2 = function(_value)
-	{
-		return power(2.0, ceil(log2(_value)));
 	}
 	
 

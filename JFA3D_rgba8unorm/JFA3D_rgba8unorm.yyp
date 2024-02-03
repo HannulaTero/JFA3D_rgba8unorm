@@ -22,9 +22,11 @@
   },
   "resources": [
     {"id":{"name":"objTiteJFA3D_Example","path":"objects/objTiteJFA3D_Example/objTiteJFA3D_Example.yy",},},
+    {"id":{"name":"scrTiteJFA3D_Surface","path":"scripts/scrTiteJFA3D_Surface/scrTiteJFA3D_Surface.yy",},},
     {"id":{"name":"shdTiteJFA3D","path":"shaders/shdTiteJFA3D/shdTiteJFA3D.yy",},},
     {"id":{"name":"scrTiteJFA3D","path":"scripts/scrTiteJFA3D/scrTiteJFA3D.yy",},},
     {"id":{"name":"noteTiteJFA3D","path":"notes/noteTiteJFA3D/noteTiteJFA3D.yy",},},
+    {"id":{"name":"sprTiteJFA3D_Background","path":"sprites/sprTiteJFA3D_Background/sprTiteJFA3D_Background.yy",},},
     {"id":{"name":"roomTiteJFA3D_Example","path":"rooms/roomTiteJFA3D_Example/roomTiteJFA3D_Example.yy",},},
   ],
   "RoomOrderNodes": [

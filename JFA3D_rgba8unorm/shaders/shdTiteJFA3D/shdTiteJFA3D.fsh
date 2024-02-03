@@ -25,16 +25,12 @@ uniform sampler2D texB;		// and matches name with this.
 
 
 uniform int uniAction;
-uniform vec2 uniSize;
 uniform vec2 uniTexel;
 uniform vec3 uniShape;
-uniform vec3 uniRange[2];
-uniform vec2 uniFactorMulZ;
-uniform vec2 uniFactorDivZ;
 uniform float uniThreshold;	
+uniform float uniJumpMax;	
 uniform vec3 uniJumpA;	
 uniform vec3 uniJumpB;	
-uniform float uniJumpMax;	
 
 
 #endregion
@@ -86,7 +82,7 @@ float EncodeDistance(float _dist);
 float EncodeDistance(float _pack);
 
 vec4 EncodeField(vec4 _dist);
-vec4 DecodeField(float _pack);
+vec4 DecodeField(vec4 _pack);
 
 
 #endregion
@@ -96,9 +92,9 @@ vec4 DecodeField(float _pack);
 #region DECLARE: SAMPLING FUNCTIONS.
 
 
-vec4 Sample1D(sampler2D _tex, float _pos);
-vec4 Sample2D(sampler2D _tex, vec2 _pos);
-vec4 Sample3D(sampler2D _tex, vec3 _pos);
+vec4 Sample2D(sampler2D _tex, vec2 _position2D);
+vec4 Sample3D(sampler2D _tex, vec3 _position3D);
+vec4 SampleLUT(sampler2D _tex, vec4 _position4D);
 
 
 #endregion
@@ -114,7 +110,6 @@ void ActionPass();
 void ActionFill();
 void ActionField();
 void ActionShrink();
-void ActionVertex();
 
 
 #endregion
@@ -131,8 +126,6 @@ void main()
 	else if (uniAction == 2) ActionPass();
 	else if (uniAction == 3) ActionFill();
 	else if (uniAction == 4) ActionField();
-	else if (uniAction == 5) ActionShrink();
-	else if (uniAction == 6) ActionVertex();
 }
 
 #endregion
@@ -145,9 +138,9 @@ void main()
 void ActionSeed()
 {
 	// Look current value.
-	vec2 _position = floor(gl_FragCoord.xy);
-	vec4 _sample = Sample2D(texA, _position);
-	vec2 _pack = EncodeValue(_position);
+	vec2 _position2D = floor(gl_FragCoord.xy);
+	vec4 _sample = Sample2D(texA, _position2D);
+	vec3 _pack = EncodeValue(Position2Dto3D(_position2D));
 	
 	// Save coordinate, store whether it points to seed.
 	gl_FragData[0] = vec4(_pack, (_sample.a >= uniThreshold));
@@ -156,7 +149,6 @@ void ActionSeed()
 
 void ActionReverse()
 {
-	// Reverse seed.
 	vec4 _pack = Sample2D(texA, floor(gl_FragCoord.xy));
 	gl_FragData[0] = vec4(_pack.xyz, 1.0 - _pack.w);
 }
@@ -177,9 +169,9 @@ void ActionPass()
 	float _smallest = uniJumpMax;
 	
 	// Get origin and two neighbours. Origin is default value.
-	vec4 _coordO = Decode(Sample2D(texA, _position2D));
-	vec4 _coordA = Decode(Sample3D(texA, clamp(_position3D + uniJumpA, uniRange[0], uniRange[1])));
-	vec4 _coordB = Decode(Sample3D(texA, clamp(_position3D + uniJumpB, uniRange[0], uniRange[1])));
+	vec4 _coordO = DecodeValue(Sample2D(texA, _position2D));
+	vec4 _coordA = DecodeValue(Sample3D(texA, _position3D + uniJumpA));
+	vec4 _coordB = DecodeValue(Sample3D(texA, _position3D + uniJumpB));
 		
 	// Check whether neighbour A points to seed, and is closer.
 	if (_coordA.w > 128.0)
@@ -247,75 +239,16 @@ void ActionField()
 	
 	// Calculate normals.
 	vec3 _normals = vec3(0.0);
-	if (_dist > 0.0) 
+	if (_signedDistance > 0.0) 
 	{
 		_normals = normalize(_regular.xyz - _position3D);
-	} else if (_dist < 0.0)
+	} else if (_signedDistance < 0.0)
 	{
 		_normals = normalize(_position3D - _reverse.xyz);
 	}
 	
 	// Save the normals and singed distance.
 	gl_FragData[0] = EncodeField(vec4(_normals, _signedDistance));
-}
-
-
-#endregion
-// 
-//==========================================================
-//
-#region DEFINE: ACTION SHRINK.
-
-
-void ActionShrink()
-{
-	
-}
-
-
-#endregion
-// 
-//==========================================================
-//
-#region DEFINE: ACTION VERTEX.
-
-
-void ActionVertex()
-{
-	// Unifinished, may not be even useful. So for now, why bother to use time on this.
-	
-	// Get four neighbouring positions.
-	//vec2 _position2D = floor(gl_FragCoord.xy);
-	//vec3 _position3D = Position2Dto3D(_position2D);
-	//vec3 _sample[8];
-	//_sample[0] = Sample3D(texA, _position3D + vec2(0.0, 0.0, 0.0)).xyz;
-	//_sample[1] = Sample3D(texA, _position3D + vec2(0.0, 0.0, 1.0)).xyz;
-	//_sample[2] = Sample3D(texA, _position3D + vec2(0.0, 1.0, 0.0)).xyz;
-	//_sample[3] = Sample3D(texA, _position3D + vec2(0.0, 1.0, 1.0)).xyz;
-	//_sample[4] = Sample3D(texA, _position3D + vec2(1.0, 0.0, 0.0)).xyz;
-	//_sample[5] = Sample3D(texA, _position3D + vec2(1.0, 0.0, 1.0)).xyz;
-	//_sample[6] = Sample3D(texA, _position3D + vec2(1.0, 1.0, 0.0)).xyz;
-	//_sample[7] = Sample3D(texA, _position3D + vec2(1.0, 1.0, 1.0)).xyz;
-	//
-	//// Regular seed coordinate mapping.
-	//float _difference = 0.0;
-	//for(int i = 0; i < 8; i++) 
-	//{
-	//	vec3 _A = _sample[i];
-	//	for(int j = 7; j >= 1; j++) 
-	//	{
-	//		if (j >= i) break;
-	//		_difference += float(_A != _sample[j]);
-	//	}
-	//}
-	//
-	//// Calculate whether is current position is vertex.
-	//bool _regularIsVertex = (_regularDifference >= 2.0);
-	//bool _reverseIsVertex = (_reverseDifference >= 2.0);
-	//
-	//// Save the results.
-	//_reverseIsVertex = false; // Currently not needed, plus output looks better without it.
-	//gl_FragData[0] = vec4(_regularIsVertex, _reverseIsVertex, 0.5, 1.0);
 }
 
 
@@ -351,25 +284,25 @@ vec4 DecodeValue(vec4 _pack)
 
 float EncodeValue(float _value)
 {
-	return (clamp(floor(value), 0.0, 255.0) / 255.0);
+	return (clamp(floor(_value), 0.0, 255.0) / 255.0);
 }
 
 
 vec2 EncodeValue(vec2 _value)
 {
-	return (clamp(floor(value), vec2(0.0), vec2(255.0)) / 255.0);
+	return (clamp(floor(_value), vec2(0.0), vec2(255.0)) / 255.0);
 }
 
 
 vec3 EncodeValue(vec3 _value) 
 {
-	return (clamp(floor(value), vec3(0.0), vec3(255.0)) / 255.0);
+	return (clamp(floor(_value), vec3(0.0), vec3(255.0)) / 255.0);
 }
 
 
 vec4 EncodeValue(vec4 _value)
 {
-	return (clamp(floor(value), vec4(0.0), vec4(255.0)) / 255.0);
+	return (clamp(floor(_value), vec4(0.0), vec4(255.0)) / 255.0);
 }
 
 
@@ -382,34 +315,43 @@ vec4 EncodeValue(vec4 _value)
 
 vec2 PositionLUTto2D(vec4 _positionLUT)
 {
-	return _positionLUT.xy + _positionLUT.zw * uniFactorMulZ;
+	return _positionLUT.xy + _positionLUT.zw * uniShape.xy * 16.0;
 }
 
 
 vec4 Position2DtoLUT(vec2 _position2D)
 {
 	vec4 _positionLUT;
-	_positionLUT.zw = floor(_position2D * uniFactorDivZ);
-	_positionLUT.xy = _position2D - _positionLUT.zw * uniFactorMulZ;
+	vec2 _zfactor = uniShape.xy * 16.0;
+	_positionLUT.zw = floor(_position2D / _zfactor);
+	_positionLUT.xy = _position2D - _positionLUT.zw * _zfactor;
 	return _positionLUT;
 }
 
 
 vec2 Position3Dto2D(vec3 _position3D)
 {
-	return PositionLUTto2D(Position3DtoLUT(_position3D));
+	vec2 _position2D;
+	float _zfactor = floor(_position3D.z / 16.0);
+	_position2D.x = _position3D.x + _position3D.z - _zfactor * 16.0;
+	_position2D.y = _position3D.y + _zfactor;
+	return _position2D;
 }
 
 
 vec3 Position2Dto3D(vec2 _position2D)
 {
-	return PositionLUTto3D(Position2DtoLUT(_position2D));
+	vec3 _position3D;
+	vec2 _zfactor = floor(_position2D / 16.0);
+	_position3D.xy = _position2D - _zfactor * 16.0;
+	_position3D.z = _zfactor.x + _zfactor.y * 16.0;
+	return _position3D;
 }
 
 
 vec3 PositionLUTto3D(vec4 _positionLUT)
 {
-	return vec4(_positionLUT.yx, _positionLUT.z + _positionLUT.w * 16.0);
+	return vec3(_positionLUT.yx, _positionLUT.z + _positionLUT.w * 16.0);
 }
 
 
@@ -445,7 +387,7 @@ float EncodeDistance(float _dist)
 }
 
 
-float EncodeDistance(float _pack)
+float DecodeDistance(float _pack)
 {
 	return _pack * 255.0 - 128.0;
 }
@@ -460,7 +402,7 @@ vec4 EncodeField(vec4 _field)
 }
 
 
-vec4 DecodeField(float _pack)
+vec4 DecodeField(vec4 _pack)
 {
 	return vec4(
 		DecodeNormal(_pack.xyz),
@@ -476,27 +418,22 @@ vec4 DecodeField(float _pack)
 #region DEFINE: SAMPLING FUNCTIONS.
 
 
-vec4 Sample1D(sampler2D _tex, float _pos)
+vec4 Sample2D(sampler2D _tex, vec2 _position2D)
 {
-	return Sample2D(_tex, Position1Dto2D(_pos));
+	return texture2D(_tex, (_position2D + 0.5) / uniTexel);
 }
 
 
-vec4 Sample2D(sampler2D _tex, vec2 _pos)
+vec4 Sample3D(sampler2D _tex, vec3 _position3D)
 {
-	return texture2D(_tex, (_pos + 0.5) / uniTexel);
+	_position3D = clamp(_position3D, vec3(0.0), uniShape-1.0);
+	return Sample2D(_tex, Position3Dto2D(_position3D));
 }
 
 
-vec4 Sample3D(sampler2D _tex, vec3 _pos)
+vec4 SampleLUT(sampler2D _tex, vec4 _positionLUT)
 {
-	return Sample2D(_tex, Position3Dto2D(_pos)));
-}
-
-
-vec4 SampleLUT(sampler2D _tex, vec4 _lut)
-{
-	return Sample2D(_tex, PositionLUTto2D(_lut));
+	return Sample2D(_tex, PositionLUTto2D(_positionLUT));
 }
 
 

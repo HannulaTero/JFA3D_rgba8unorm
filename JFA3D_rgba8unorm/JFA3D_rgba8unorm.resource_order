@@ -5,7 +5,9 @@
   ],
   "ResourceOrderSettings": [
     {"name":"objTiteJFA3D_Example","order":1,"path":"objects/objTiteJFA3D_Example/objTiteJFA3D_Example.yy",},
+    {"name":"scrTiteJFA3D_Surface","order":3,"path":"scripts/scrTiteJFA3D_Surface/scrTiteJFA3D_Surface.yy",},
     {"name":"shdTiteJFA3D","order":1,"path":"shaders/shdTiteJFA3D/shdTiteJFA3D.yy",},
     {"name":"noteTiteJFA3D","order":2,"path":"notes/noteTiteJFA3D/noteTiteJFA3D.yy",},
+    {"name":"sprTiteJFA3D_Background","order":2,"path":"sprites/sprTiteJFA3D_Background/sprTiteJFA3D_Background.yy",},
   ],
 }
